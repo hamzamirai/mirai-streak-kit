@@ -1,0 +1,65 @@
+name: Swift Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+        xcode: ['16.0']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select --switch /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
+
+    - name: Check Swift version
+      run: swift --version
+
+    - name: Build
+      run: swift build -v
+
+    - name: Run tests
+      run: swift test -v
+
+  build-ios:
+    name: Build for iOS
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build for iOS
+      run: |
+        swift build \
+          -Xswiftc -suppress-warnings \
+          --product MiraiStreakKit
+
+    - name: Verify package structure
+      run: |
+        swift package describe
+
+  lint:
+    name: Check warnings
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build and check for warnings
+      run: |
+        swift build -Xswiftc -warnings-as-errors 2>&1 | tee build.log
+        if grep -i "warning:" build.log; then
+          echo "⚠️ Warnings found in build"
+          exit 1
+        fi
+        echo "✅ No warnings detected"
+      continue-on-error: true

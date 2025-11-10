@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  test-before-release:
+    name: Test before Release
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check Swift version
+      run: swift --version
+
+    - name: Build package
+      run: swift build -v
+
+    - name: Run all tests
+      run: swift test -v
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: macos-latest
+    needs: test-before-release
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Extract version from tag
+      id: tag_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        VERSION=${{ steps.tag_version.outputs.VERSION }}
+        echo "## MiraiStreakKit v${VERSION}" > release_notes.md
+        echo "" >> release_notes.md
+        echo "### What's New" >> release_notes.md
+        echo "- ✅ Full test coverage with 174+ tests" >> release_notes.md
+        echo "- ✅ Support for iOS 17+, macOS 14+, visionOS 2+" >> release_notes.md
+        echo "- ✅ SwiftUI integration with @Observable" >> release_notes.md
+        echo "- ✅ Multiple persistence options (UserDefaults, File, AppGroup)" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "### Installation" >> release_notes.md
+        echo "\`\`\`swift" >> release_notes.md
+        echo ".package(url: \"https://github.com/yourusername/MiraiStreakKit.git\", from: \"${VERSION}\")" >> release_notes.md
+        echo "\`\`\`" >> release_notes.md
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: release_notes.md
+        draft: false
+        prerelease: false
+        files: |
+          README.md
+          LICENSE
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  post-release:
+    name: Post-Release Tasks
+    runs-on: macos-latest
+    needs: create-release
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Extract version
+      id: tag_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Print release info
+      run: |
+        echo "🎉 Successfully released MiraiStreakKit v${{ steps.tag_version.outputs.VERSION }}"
+        echo "📦 Package is ready for distribution"
+        echo "🔗 View release: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixes
+- **Swift Version Requirement**: Further downgraded to Swift 6.0.0 for maximum GitHub Actions runner compatibility
+  - Xcode 16.0 on macOS-latest includes Swift 6.0.0
+  - All 142 tests pass with Swift 6.0.0
+
 ### Planned Features
 - TimeZone pinning for cross-timezone applications
 - Best streak tracking alongside current streak

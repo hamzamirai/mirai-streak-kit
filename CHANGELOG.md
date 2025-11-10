@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2025-11-11
+
+### Fixes
+- **Swift Version Requirement**: Downgraded `swift-tools-version` from 6.2 to 6.1 for improved GitHub Actions CI/CD compatibility
+  - Ensures compatibility with broader range of CI/CD environments
+  - All 142 tests pass with Swift 6.1
+  - No feature changes or breaking changes
+
+---
+
 ## [1.0.0] - 2025-11-11
 
 ### Initial Release

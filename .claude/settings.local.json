@@ -1,9 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(swift test:*)",
-      "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Implement MiraiStreakKit v1.0.0 - Production-ready streak tracking library\n\n## Core Features\n\n### Streak Tracking\n- Streak struct with outcome determination for consecutive day tracking\n- Support for same-day multiple check-ins detection\n- Next-day window logic for automatic streak continuation\n- Automatic streak reset on missed days\n- Configurable calendar systems (Gregorian, Hebrew, Islamic, etc.)\n\n### Observable Manager\n- @Observable StreakManager class for reactive state management\n- @MainActor isolated for thread-safe SwiftUI integration\n- Configurable with custom calendars and persistence stores\n- Public methods: updateStreak(), getStreakLength(), hasCompletedStreak()\n\n### Persistence Layer\n- Custom StreakStore protocol for extensibility\n- UserDefaultsStore for simple in-app storage\n- FileStore for JSON file-based persistence\n- AppGroupStore for sharing between apps and extensions\n- Atomic writes to prevent data corruption\n\n### SwiftUI Integration\n- MiraiStreakInjector view modifier for environment setup\n- .setupMiraiStreak() convenience extension\n- StreakView component with flame icon display\n- Full @Environment support for accessing manager in views\n\n## Test Coverage\n- 174+ comprehensive tests across 5 test files\n- StreakCoreTests (33): edge cases, calendars, boundaries, Codable\n- PersistenceTests (27): all store implementations, error handling\n- StreakManagerTests (58): manager methods, initialization, config\n- SwiftUIIntegrationTests (23): environment injection, modifiers\n- IntegrationTests (27): end-to-end flows, real-world scenarios\n\n## Quality Assurance\n- ✅ Zero compiler warnings\n- ✅ 100% test pass rate\n- ✅ Full Sendable conformance for concurrency safety\n- ✅ Complete API documentation\n- ✅ No external dependencies\n\n## Platform Support\n- iOS 17.0+\n- macOS 14.0+\n- visionOS 2.0+\n\n## Documentation\n- Comprehensive README with quick start guide\n- Full API reference with examples\n- Architecture overview and design patterns\n- Contributing guidelines and code style\n- CHANGELOG with version history\n\n## CI/CD\n- GitHub Actions swift-test.yml for automated testing on each push\n- GitHub Actions release.yml for automated release creation on version tags\n- Complete test automation and artifact management\n\n🤖 Generated with Claude Code\nEOF\n)\")"
+      "Bash(git push:*)",
+      "Bash(git tag:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git merge:*)"
     ],
     "deny": [],
     "ask": []

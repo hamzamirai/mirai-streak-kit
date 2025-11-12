@@ -10,6 +10,7 @@ A modern, Swift 6-native streak tracking framework for iOS, macOS, and visionOS 
 - ❄️ **Freeze/Make-up Day Tokens**: Protect streaks with earned tokens at milestone intervals
 - 📊 **Analytics Integration**: Built-in event tracking with delegate pattern for analytics services
 - 🌍 **TimeZone Pinning**: Lock streak calculations to specific timezones for global apps
+- 🔔 **Smart Reminders**: Built-in notification system to keep users engaged with their streaks
 - 💾 **Flexible Persistence**: UserDefaults, file-based, or shared App Group storage
 - 🧪 **Fully Tested**: Comprehensive test suite with the Swift Testing framework
 - 🔒 **Concurrency-Safe**: `@MainActor` isolation with strict Swift 6 concurrency checking
@@ -304,7 +305,54 @@ final class MyAnalyticsDelegate: StreakAnalyticsDelegate {
 manager.analyticsDelegate = MyAnalyticsDelegate()
 ```
 
->>>>>>> fd44b1e (feat: Add Analytics Integration Hooks)
+### Smart Reminders
+
+**Features:**
+- Schedule daily reminders at custom times
+- Smart logic: only reminds if user hasn't checked in today
+- Customizable notification content with streak length placeholder
+- Automatic reminder updates after check-ins
+
+**Implementation:**
+```swift
+import MiraiStreakKit
+
+// Create notification manager
+let notificationManager = StreakNotificationManager(streakManager: manager)
+
+// Request permission (call once at app launch or onboarding)
+await notificationManager.requestAuthorization()
+
+// Schedule daily reminder at 8 PM
+let reminderTime = DateComponents(hour: 20, minute: 0)
+await notificationManager.scheduleDailyReminder(at: reminderTime)
+
+// After user checks in, reschedule for tomorrow
+streakManager.updateStreak()
+await notificationManager.rescheduleAfterCheckIn()
+
+// Cancel reminders (e.g., if user disables notifications in settings)
+await notificationManager.cancelReminders()
+
+// Check if reminders are scheduled
+let isScheduled = await notificationManager.hasScheduledReminders()
+```
+
+**Customization:**
+```swift
+let config = StreakNotificationManager.Config(
+    identifier: "myAppStreak",
+    title: "Keep Your Streak Alive!",
+    bodyTemplate: "Don't lose your {streak}-day streak! Tap to check in.",
+    sound: .default
+)
+
+let notificationManager = StreakNotificationManager(
+    streakManager: manager,
+    config: config
+)
+```
+
 ## Examples
 
 ### Streak Timeline

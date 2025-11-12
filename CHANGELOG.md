@@ -43,6 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Events fired at appropriate points in streak lifecycle
   - Includes 10 comprehensive tests for analytics integration
 
+- **Smart Reminders System**: Built-in notification system for user engagement
+  - Added `StreakNotificationManager` class for scheduling reminders
+  - Smart logic: only sends reminders if user hasn't checked in
+  - Customizable notification content with streak length placeholder
+  - Methods: requestAuthorization(), scheduleDailyReminder(), cancelReminders()
+  - Automatic reminder updates after check-ins with rescheduleAfterCheckIn()
+  - Configurable notification title, body template, and sound
+  - iOS/macOS/visionOS support via UserNotifications framework
+
 ### Fixes
 - **Swift Version Requirement**: Further downgraded to Swift 6.0.0 for maximum GitHub Actions runner compatibility
   - Xcode 16.0 on macOS-latest includes Swift 6.0.0

@@ -7,18 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Best Streak Tracking**: Automatically tracks and persists the longest streak ever achieved
+  - Added `bestStreak` property to `Streak` struct
+  - Added `getBestStreak()` method to `StreakManager`
+  - Updated `StreakView` to display both current and best streaks
+  - Backward compatible with existing data (defaults to 0)
+  - Includes 9 comprehensive tests for best streak functionality
+
+- **Freeze/Make-up Day Tokens**: Protect streaks with earned tokens at milestone intervals
+  - Added `freezeTokens` and `lastFreezeDate` properties to `Streak` struct
+  - Added `tokenMilestone` configuration (default: 7 days)
+  - Automatic token earning at milestone streaks
+  - Added `useFreeze()` method to protect streak from breaking
+  - Added `canUseFreeze()` method to check token availability
+  - Added `getFreezeTokens()` method to access token count
+  - Tokens persist across sessions and survive streak resets
+  - Prevents multiple token usage for same missed day
+  - Includes 11 comprehensive tests for freeze token functionality
+
+- **TimeZone Pinning**: Lock streak calculations to specific timezone for travelers
+  - Added `pinnedTimeZone` optional property to `Config`
+  - Automatically applies pinned timezone to calendar
+  - All date comparisons use pinned timezone when set
+  - Useful for travelers and global apps with regional focus
+  - Config initialization automatically configures calendar timezone
+  - Includes 7 comprehensive tests covering timezone scenarios
+
+- **Analytics Integration Hooks**: Track streak events with delegate pattern
+  - Added `StreakEvent` enum with 5 event types
+  - Added `StreakAnalyticsDelegate` protocol for event notifications
+  - Added `analyticsDelegate` weak property to `StreakManager`
+  - Events: streakUpdated, milestoneReached, streakBroken, freezeTokenUsed, newBestStreakAchieved
+  - Weak delegate prevents retain cycles
+  - Events fired at appropriate points in streak lifecycle
+  - Includes 10 comprehensive tests for analytics integration
+
 ### Fixes
 - **Swift Version Requirement**: Further downgraded to Swift 6.0.0 for maximum GitHub Actions runner compatibility
   - Xcode 16.0 on macOS-latest includes Swift 6.0.0
   - All 142 tests pass with Swift 6.0.0
 
 ### Planned Features
-- TimeZone pinning for cross-timezone applications
-- Best streak tracking alongside current streak
-- Freeze/Make-up day tokens for streak protection
-- Analytics integration hooks
 - CloudKit persistence option
 - Performance optimizations for large datasets
+- Widget support for iOS 17+
+- App Clips integration
 
 ---
 

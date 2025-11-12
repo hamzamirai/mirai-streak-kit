@@ -6,6 +6,10 @@ A modern, Swift 6-native streak tracking framework for iOS, macOS, and visionOS 
 
 - ✨ **Swift 6 & Observation**: Leverages `@Observable` for reactive UI updates
 - 🎯 **Next-Day Window Logic**: Streak continues when checked in from 00:00–23:59 the next calendar day
+- 🏆 **Best Streak Tracking**: Automatically tracks and displays the longest streak ever achieved
+- ❄️ **Freeze/Make-up Day Tokens**: Protect streaks with earned tokens at milestone intervals
+- 📊 **Analytics Integration**: Built-in event tracking with delegate pattern for analytics services
+- 🌍 **TimeZone Pinning**: Lock streak calculations to specific timezones for global apps
 - 💾 **Flexible Persistence**: UserDefaults, file-based, or shared App Group storage
 - 🧪 **Fully Tested**: Comprehensive test suite with the Swift Testing framework
 - 🔒 **Concurrency-Safe**: `@MainActor` isolation with strict Swift 6 concurrency checking
@@ -197,6 +201,110 @@ A streak **resets** when:
 - Multiple check-ins on the same day don't increment the streak
 - `updateStreak()` is idempotent for the same calendar day
 
+<<<<<<< HEAD
+=======
+### Freeze Token System
+
+**Earning Tokens:**
+- Earn 1 freeze token at each milestone (default: every 7 days)
+- Configure milestone interval via `Config(tokenMilestone: 7)`
+- Tokens accumulate and persist across sessions
+
+**Using Tokens:**
+- Use `useFreeze(on: date)` to protect a streak from breaking
+- Prevents streak reset when you miss a day
+- Can only use one token per missed day gap
+- Tokens are consumed when used successfully
+
+**Example:**
+```swift
+// Check token availability
+if manager.canUseFreeze() {
+    let success = manager.useFreeze()
+    if success {
+        print("Streak saved! Tokens remaining: \(manager.getFreezeTokens())")
+    }
+}
+```
+
+### TimeZone Pinning
+
+**Use Cases:**
+- Travelers who want streaks to follow their home timezone
+- Global apps targeting users in specific regions
+- Apps needing consistent day boundaries regardless of user location
+
+**Configuration:**
+```swift
+// Pin to a specific timezone
+let tokyo = TimeZone(identifier: "Asia/Tokyo")!
+.setupMiraiStreak(
+    config: .init(
+        calendar: .current,
+        pinnedTimeZone: tokyo
+    )
+)
+
+// Or use default (no pinning)
+.setupMiraiStreak()  // Uses device timezone
+```
+
+**Behavior:**
+- When set, all date comparisons use the pinned timezone
+- Streak day boundaries align with the pinned timezone
+- User can travel across timezones without affecting streak logic
+
+### Analytics Integration
+
+**Tracked Events:**
+- `streakUpdated` - Fired when streak is updated or started
+- `milestoneReached` - Fired when reaching token milestone (7, 14, 21 days, etc.)
+- `streakBroken` - Fired when streak resets due to missed days
+- `freezeTokenUsed` - Fired when user uses a freeze token
+- `newBestStreakAchieved` - Fired when current streak exceeds best
+
+**Implementation:**
+```swift
+final class MyAnalyticsDelegate: StreakAnalyticsDelegate {
+    func streakEventOccurred(_ event: StreakEvent, manager: StreakManager) {
+        switch event {
+        case .streakUpdated(let length, let isNew):
+            Analytics.track("streak_updated", properties: [
+                "length": length,
+                "is_new_streak": isNew
+            ])
+
+        case .milestoneReached(let length, let earnedToken):
+            Analytics.track("milestone_reached", properties: [
+                "milestone": length,
+                "earned_token": earnedToken
+            ])
+
+        case .streakBroken(let previousLength, let bestStreak):
+            Analytics.track("streak_broken", properties: [
+                "previous_length": previousLength,
+                "best_streak": bestStreak
+            ])
+
+        case .freezeTokenUsed(let tokensRemaining):
+            Analytics.track("freeze_used", properties: [
+                "tokens_remaining": tokensRemaining
+            ])
+
+        case .newBestStreakAchieved(let newBest, let previousBest):
+            Analytics.track("new_best_streak", properties: [
+                "new_best": newBest,
+                "previous_best": previousBest
+            ])
+        }
+    }
+}
+
+// Set the delegate
+manager.analyticsDelegate = MyAnalyticsDelegate()
+```
+
+>>>>>>> fd44b1e (feat: Add Analytics Integration Hooks)
 ## Examples
 
 ### Streak Timeline

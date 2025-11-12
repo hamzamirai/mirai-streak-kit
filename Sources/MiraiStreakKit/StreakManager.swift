@@ -41,38 +41,18 @@ public final class StreakManager {
         /// The calendar to use for date comparisons.
         public var calendar: Calendar
 
-        /// The milestone interval for earning freeze tokens.
-        ///
-        /// Users earn one freeze token each time they reach a multiple of this value.
-        /// For example, with `tokenMilestone = 7`, users earn tokens at 7, 14, 21 days, etc.
+        /// The streak length at which a freeze token is earned.
+        /// Set to 0 to disable freeze token earning. Defaults to 7 days.
         public var tokenMilestone: Int
-
-        /// Optional timezone pinning for streak calculations.
-        ///
-        /// When set, all date comparisons use this timezone regardless of device timezone.
-        /// Useful for travelers or apps targeting users in specific regions.
-        ///
-        /// If `nil`, uses the calendar's default timezone.
-        public var pinnedTimeZone: TimeZone?
 
         /// Creates a new configuration.
         ///
         /// - Parameters:
         ///   - calendar: The calendar to use. Defaults to the current calendar.
-        ///   - tokenMilestone: The streak length interval for earning tokens. Defaults to 7 days.
-        ///   - pinnedTimeZone: Optional timezone to pin streak calculations to. Defaults to nil.
-        public init(
-            calendar: Calendar = .current,
-            tokenMilestone: Int = 7,
-            pinnedTimeZone: TimeZone? = nil
-        ) {
-            var mutableCalendar = calendar
-            if let pinnedTimeZone {
-                mutableCalendar.timeZone = pinnedTimeZone
-            }
-            self.calendar = mutableCalendar
+        ///   - tokenMilestone: The streak length for earning freeze tokens. Defaults to 7 days.
+        public init(calendar: Calendar = .current, tokenMilestone: Int = 7) {
+            self.calendar = calendar
             self.tokenMilestone = tokenMilestone
-            self.pinnedTimeZone = pinnedTimeZone
         }
     }
 

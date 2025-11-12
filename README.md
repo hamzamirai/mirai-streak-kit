@@ -9,6 +9,7 @@ A modern, Swift 6-native streak tracking framework for iOS, macOS, and visionOS 
 - 🏆 **Best Streak Tracking**: Automatically tracks and displays the longest streak ever achieved
 - ❄️ **Freeze/Make-up Day Tokens**: Protect streaks with earned tokens at milestone intervals
 - 📊 **Analytics Integration**: Built-in event tracking with delegate pattern for analytics services
+- 🌍 **TimeZone Pinning**: Lock streak calculations to specific timezones for global apps
 - 💾 **Flexible Persistence**: UserDefaults, file-based, or shared App Group storage
 - 🧪 **Fully Tested**: Comprehensive test suite with the Swift Testing framework
 - 🔒 **Concurrency-Safe**: `@MainActor` isolation with strict Swift 6 concurrency checking
@@ -66,25 +67,21 @@ import MiraiStreakKit
 
 struct ContentView: View {
     @Environment(StreakManager.self) private var streakManager
-
+    
     var body: some View {
         VStack(spacing: 20) {
-            // Pre-built streak view (shows both current and best)
+            // Pre-built streak view
             StreakView()
-
+            
             // Custom UI
             Text("Current Streak: \(streakManager.getStreakLength())")
                 .font(.title)
-
-            Text("Best Streak: \(streakManager.getBestStreak())")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
+            
             Button("Check In Today") {
                 streakManager.updateStreak()
             }
             .disabled(streakManager.hasCompletedStreak())
-
+            
             if streakManager.hasCompletedStreak() {
                 Text("✅ Completed for today!")
                     .foregroundStyle(.green)
@@ -111,21 +108,8 @@ func updateStreak(on date: Date = .now)
 @discardableResult
 func getStreakLength(on date: Date = .now) -> Int
 
-// Get the best (longest) streak ever achieved
-func getBestStreak() -> Int
-
 // Check if streak completed for a given date
 func hasCompletedStreak(on date: Date = .now) -> Bool
-
-// Use a freeze token to protect the streak
-@discardableResult
-func useFreeze(on date: Date = .now) -> Bool
-
-// Check if a freeze token can be used
-func canUseFreeze(on date: Date = .now) -> Bool
-
-// Get the number of available freeze tokens
-func getFreezeTokens() -> Int
 ```
 
 #### Properties
@@ -145,20 +129,7 @@ The core data structure representing a streak.
 ```swift
 public struct Streak: Codable, Sendable, Equatable {
     public var length: Int
-    public var bestStreak: Int
-    public var freezeTokens: Int
     public var lastDate: Date?
-    public var lastFreezeDate: Date?
-}
-```
-
-### Configuration
-
-```swift
-public struct Config: Sendable, Equatable {
-    public var calendar: Calendar
-    public var tokenMilestone: Int  // Earn tokens every N days (default: 7)
-    public var pinnedTimeZone: TimeZone?  // Optional timezone pinning
 }
 ```
 
@@ -230,6 +201,8 @@ A streak **resets** when:
 - Multiple check-ins on the same day don't increment the streak
 - `updateStreak()` is idempotent for the same calendar day
 
+<<<<<<< HEAD
+=======
 ### Freeze Token System
 
 **Earning Tokens:**
@@ -331,6 +304,7 @@ final class MyAnalyticsDelegate: StreakAnalyticsDelegate {
 manager.analyticsDelegate = MyAnalyticsDelegate()
 ```
 
+>>>>>>> fd44b1e (feat: Add Analytics Integration Hooks)
 ## Examples
 
 ### Streak Timeline

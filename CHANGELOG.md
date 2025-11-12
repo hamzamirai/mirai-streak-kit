@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Backward compatible with existing data (defaults to 0)
   - Includes 9 comprehensive tests for best streak functionality
 
+- **Freeze/Make-up Day Tokens**: Protect streaks with earned tokens at milestone intervals
+  - Added `freezeTokens` and `lastFreezeDate` properties to `Streak` struct
+  - Added `tokenMilestone` configuration (default: 7 days)
+  - Automatic token earning at milestone streaks
+  - Added `useFreeze()` method to protect streak from breaking
+  - Added `canUseFreeze()` method to check token availability
+  - Added `getFreezeTokens()` method to access token count
+  - Tokens persist across sessions and survive streak resets
+  - Prevents multiple token usage for same missed day
+  - Includes 11 comprehensive tests for freeze token functionality
+
 ### Fixes
 - **Swift Version Requirement**: Further downgraded to Swift 6.0.0 for maximum GitHub Actions runner compatibility
   - Xcode 16.0 on macOS-latest includes Swift 6.0.0

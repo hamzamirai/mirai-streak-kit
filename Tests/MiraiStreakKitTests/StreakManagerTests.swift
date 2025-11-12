@@ -658,6 +658,223 @@ struct StreakManagerTests {
         }
     }
 
+    // MARK: - Freeze Token Tests
+
+    @Suite
+    struct FreezeTokenTests {
+        let calendar = Calendar(identifier: .gregorian)
+
+        @Test @MainActor
+        func tokensEarnedAtMilestones() throws {
+            let store = InMemoryStore()
+            let config = StreakManager.Config(calendar: calendar, tokenMilestone: 7)
+            let manager = StreakManager(store: store, config: config)
+
+            // Build a 7-day streak
+            for day in 1...7 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager.updateStreak(on: date)
+            }
+
+            #expect(manager.streak.length == 7)
+            #expect(manager.getFreezeTokens() == 1)
+
+            // Continue to 14 days
+            for day in 8...14 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager.updateStreak(on: date)
+            }
+
+            #expect(manager.streak.length == 14)
+            #expect(manager.getFreezeTokens() == 2)
+        }
+
+        @Test @MainActor
+        func freezeTokenSuccessfullyUsed() throws {
+            let store = InMemoryStore()
+            let manager = StreakManager(store: store, config: .init(calendar: calendar))
+
+            // Build a 5-day streak and give a token
+            for day in 1...5 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager.updateStreak(on: date)
+            }
+            manager.streak.freezeTokens = 1
+            manager.save()
+
+            // Miss a day (day 6), try to check in on day 7
+            let day7 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 7).date!
+
+            #expect(manager.canUseFreeze(on: day7) == true)
+
+            let success = manager.useFreeze(on: day7)
+            #expect(success == true)
+            #expect(manager.getFreezeTokens() == 0)
+            #expect(manager.streak.length == 5)  // Length maintained
+            #expect(manager.streak.lastDate == day7)
+        }
+
+        @Test @MainActor
+        func freezeFailsWithoutTokens() throws {
+            let store = InMemoryStore()
+            let manager = StreakManager(store: store, config: .init(calendar: calendar))
+
+            // Build a streak without tokens
+            let day1 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 1).date!
+            manager.updateStreak(on: day1)
+
+            // Try to use freeze without tokens
+            let day3 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 3).date!
+            let success = manager.useFreeze(on: day3)
+
+            #expect(success == false)
+            #expect(manager.canUseFreeze(on: day3) == false)
+        }
+
+        @Test @MainActor
+        func freezeFailsWhenStreakNotBroken() throws {
+            let store = InMemoryStore()
+            let manager = StreakManager(store: store, config: .init(calendar: calendar))
+
+            // Build a streak with a token
+            let day1 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 1).date!
+            manager.updateStreak(on: day1)
+            manager.streak.freezeTokens = 1
+            manager.save()
+
+            // Try to use freeze on same day (streak not broken)
+            let success = manager.useFreeze(on: day1)
+
+            #expect(success == false)
+            #expect(manager.getFreezeTokens() == 1)  // Token not consumed
+        }
+
+        @Test @MainActor
+        func cannotUseMultipleFreezeForSameGap() throws {
+            let store = InMemoryStore()
+            let manager = StreakManager(store: store, config: .init(calendar: calendar))
+
+            // Build a streak with 2 tokens
+            let day1 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 1).date!
+            manager.updateStreak(on: day1)
+            manager.streak.freezeTokens = 2
+            manager.save()
+
+            // Use freeze for missed day
+            let day3 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 3).date!
+            let success1 = manager.useFreeze(on: day3)
+            #expect(success1 == true)
+            #expect(manager.getFreezeTokens() == 1)
+
+            // Try to use another freeze for the same gap
+            let success2 = manager.useFreeze(on: day3)
+            #expect(success2 == false)
+            #expect(manager.getFreezeTokens() == 1)  // Token not consumed
+        }
+
+        @Test @MainActor
+        func tokensResetAfterStreakBreaks() throws {
+            let store = InMemoryStore()
+            let config = StreakManager.Config(calendar: calendar, tokenMilestone: 7)
+            let manager = StreakManager(store: store, config: config)
+
+            // Build a 7-day streak
+            for day in 1...7 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager.updateStreak(on: date)
+            }
+            #expect(manager.getFreezeTokens() == 1)
+
+            // Break the streak (no freeze used)
+            let day10 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 10).date!
+            manager.updateStreak(on: day10)
+
+            // Tokens should remain (not reset)
+            #expect(manager.streak.length == 1)
+            #expect(manager.getFreezeTokens() == 1)  // Tokens persist
+        }
+
+        @Test @MainActor
+        func freezeTokensPersistAcrossSessions() throws {
+            let store = InMemoryStore()
+            let config = StreakManager.Config(calendar: calendar, tokenMilestone: 7)
+
+            // Session 1: Earn tokens
+            let manager1 = StreakManager(store: store, config: config)
+            for day in 1...7 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager1.updateStreak(on: date)
+            }
+            #expect(manager1.getFreezeTokens() == 1)
+
+            // Session 2: Load and verify tokens persist
+            let manager2 = StreakManager(store: store, config: config)
+            #expect(manager2.getFreezeTokens() == 1)
+            #expect(manager2.streak.length == 7)
+        }
+
+        @Test @MainActor
+        func customMilestoneConfiguration() throws {
+            let store = InMemoryStore()
+            let config = StreakManager.Config(calendar: calendar, tokenMilestone: 3)
+            let manager = StreakManager(store: store, config: config)
+
+            // Build a 3-day streak
+            for day in 1...3 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager.updateStreak(on: date)
+            }
+
+            #expect(manager.getFreezeTokens() == 1)
+
+            // Continue to 6 days
+            for day in 4...6 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager.updateStreak(on: date)
+            }
+
+            #expect(manager.getFreezeTokens() == 2)
+        }
+
+        @Test @MainActor
+        func disableTokenEarningWithZeroMilestone() throws {
+            let store = InMemoryStore()
+            let config = StreakManager.Config(calendar: calendar, tokenMilestone: 0)
+            let manager = StreakManager(store: store, config: config)
+
+            // Build a long streak
+            for day in 1...20 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager.updateStreak(on: date)
+            }
+
+            // No tokens should be earned
+            #expect(manager.getFreezeTokens() == 0)
+        }
+
+        @Test @MainActor
+        func freezeAfterCheckInContinuesStreak() throws {
+            let store = InMemoryStore()
+            let manager = StreakManager(store: store, config: .init(calendar: calendar))
+
+            // Day 1
+            let day1 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 1).date!
+            manager.updateStreak(on: day1)
+            manager.streak.freezeTokens = 1
+            manager.save()
+
+            // Use freeze on day 3 (missed day 2)
+            let day3 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 3).date!
+            manager.useFreeze(on: day3)
+
+            // Check in on day 4 should continue streak
+            let day4 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 4).date!
+            manager.updateStreak(on: day4)
+
+            #expect(manager.streak.length == 2)  // Should increment from preserved length
+        }
+    }
+
     // MARK: - Sendable Conformance
 
     @Test @MainActor

@@ -7,6 +7,7 @@ A modern, Swift 6-native streak tracking framework for iOS, macOS, and visionOS 
 - ✨ **Swift 6 & Observation**: Leverages `@Observable` for reactive UI updates
 - 🎯 **Next-Day Window Logic**: Streak continues when checked in from 00:00–23:59 the next calendar day
 - 🏆 **Best Streak Tracking**: Automatically tracks and displays the longest streak ever achieved
+- ❄️ **Freeze/Make-up Day Tokens**: Protect streaks with earned tokens at milestone intervals
 - 💾 **Flexible Persistence**: UserDefaults, file-based, or shared App Group storage
 - 🧪 **Fully Tested**: Comprehensive test suite with the Swift Testing framework
 - 🔒 **Concurrency-Safe**: `@MainActor` isolation with strict Swift 6 concurrency checking
@@ -114,6 +115,16 @@ func getBestStreak() -> Int
 
 // Check if streak completed for a given date
 func hasCompletedStreak(on date: Date = .now) -> Bool
+
+// Use a freeze token to protect the streak
+@discardableResult
+func useFreeze(on date: Date = .now) -> Bool
+
+// Check if a freeze token can be used
+func canUseFreeze(on date: Date = .now) -> Bool
+
+// Get the number of available freeze tokens
+func getFreezeTokens() -> Int
 ```
 
 #### Properties
@@ -134,7 +145,18 @@ The core data structure representing a streak.
 public struct Streak: Codable, Sendable, Equatable {
     public var length: Int
     public var bestStreak: Int
+    public var freezeTokens: Int
     public var lastDate: Date?
+    public var lastFreezeDate: Date?
+}
+```
+
+### Configuration
+
+```swift
+public struct Config: Sendable, Equatable {
+    public var calendar: Calendar
+    public var tokenMilestone: Int  // Earn tokens every N days (default: 7)
 }
 ```
 
@@ -205,6 +227,30 @@ A streak **resets** when:
 
 - Multiple check-ins on the same day don't increment the streak
 - `updateStreak()` is idempotent for the same calendar day
+
+### Freeze Token System
+
+**Earning Tokens:**
+- Earn 1 freeze token at each milestone (default: every 7 days)
+- Configure milestone interval via `Config(tokenMilestone: 7)`
+- Tokens accumulate and persist across sessions
+
+**Using Tokens:**
+- Use `useFreeze(on: date)` to protect a streak from breaking
+- Prevents streak reset when you miss a day
+- Can only use one token per missed day gap
+- Tokens are consumed when used successfully
+
+**Example:**
+```swift
+// Check token availability
+if manager.canUseFreeze() {
+    let success = manager.useFreeze()
+    if success {
+        print("Streak saved! Tokens remaining: \(manager.getFreezeTokens())")
+    }
+}
+```
 
 ## Examples
 

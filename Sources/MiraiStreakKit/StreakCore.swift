@@ -3,12 +3,13 @@ import Foundation
 /// A data structure representing a daily streak.
 ///
 /// A streak tracks consecutive days of completion, storing the current length,
-/// the best (longest) streak ever achieved, and the last date a check-in occurred.
+/// the best (longest) streak ever achieved, freeze tokens for streak protection,
+/// and the last date a check-in occurred.
 ///
 /// ## Example
 ///
 /// ```swift
-/// var streak = Streak(length: 5, bestStreak: 10, lastDate: Date())
+/// var streak = Streak(length: 5, bestStreak: 10, freezeTokens: 2, lastDate: Date())
 /// let outcome = streak.determineOutcome(on: Date())
 /// ```
 public struct Streak: Codable, Sendable, Equatable {
@@ -18,19 +19,40 @@ public struct Streak: Codable, Sendable, Equatable {
     /// The best (longest) streak ever achieved.
     public var bestStreak: Int
 
+    /// The number of freeze tokens available to protect the streak.
+    ///
+    /// Freeze tokens can be used to prevent streak breaks when a day is missed.
+    /// Users earn tokens at milestone streaks (every 7 days by default).
+    public var freezeTokens: Int
+
     /// The last date when a check-in occurred.
     public var lastDate: Date?
+
+    /// The date when a freeze token was last used, if any.
+    ///
+    /// This prevents using multiple freeze tokens on the same gap.
+    public var lastFreezeDate: Date?
 
     /// Creates a new streak.
     ///
     /// - Parameters:
     ///   - length: The initial streak length. Defaults to 0.
     ///   - bestStreak: The best streak ever achieved. Defaults to 0.
+    ///   - freezeTokens: The number of freeze tokens available. Defaults to 0.
     ///   - lastDate: The last check-in date. Defaults to nil.
-    public init(length: Int = 0, bestStreak: Int = 0, lastDate: Date? = nil) {
+    ///   - lastFreezeDate: The last date a freeze was used. Defaults to nil.
+    public init(
+        length: Int = 0,
+        bestStreak: Int = 0,
+        freezeTokens: Int = 0,
+        lastDate: Date? = nil,
+        lastFreezeDate: Date? = nil
+    ) {
         self.length = length
         self.bestStreak = bestStreak
+        self.freezeTokens = freezeTokens
         self.lastDate = lastDate
+        self.lastFreezeDate = lastFreezeDate
     }
 
     /// Possible outcomes when checking a streak against a date.

@@ -230,6 +230,51 @@ struct StreakCoreTests {
         #expect(decoded.length == decoded.bestStreak)
     }
 
+    @Test("Encodes and decodes freeze tokens")
+    func codableWithFreezeTokens() throws {
+        let last = DateComponents(calendar: gregorian, year: 2025, month: 10, day: 18, hour: 12).date!
+        let freezeDate = DateComponents(calendar: gregorian, year: 2025, month: 10, day: 17, hour: 12).date!
+        let original = Streak(
+            length: 10,
+            bestStreak: 15,
+            freezeTokens: 3,
+            lastDate: last,
+            lastFreezeDate: freezeDate
+        )
+
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        let data = try encoder.encode(original)
+        let decoded = try decoder.decode(Streak.self, from: data)
+
+        #expect(decoded.length == 10)
+        #expect(decoded.bestStreak == 15)
+        #expect(decoded.freezeTokens == 3)
+        #expect(decoded.lastDate == last)
+        #expect(decoded.lastFreezeDate == freezeDate)
+    }
+
+    @Test("Decodes old data without freeze token fields")
+    func decodingBackwardCompatibilityWithFreezeTokens() throws {
+        // Simulate old data format without freeze fields
+        let oldJSON = """
+        {
+            "length": 7,
+            "bestStreak": 10,
+            "lastDate": 688393200.0
+        }
+        """.data(using: .utf8)!
+
+        let decoder = JSONDecoder()
+        let decoded = try decoder.decode(Streak.self, from: oldJSON)
+
+        #expect(decoded.length == 7)
+        #expect(decoded.bestStreak == 10)
+        #expect(decoded.freezeTokens == 0)  // Should default to 0
+        #expect(decoded.lastFreezeDate == nil)  // Should default to nil
+        #expect(decoded.lastDate != nil)
+    }
+
     @Test("Decoding succeeds with missing optional fields")
     func decodingSucceedsWithMissingOptionalFields() throws {
         let invalidJSON = """

@@ -41,11 +41,18 @@ public final class StreakManager {
         /// The calendar to use for date comparisons.
         public var calendar: Calendar
 
+        /// The streak length at which a freeze token is earned.
+        /// Set to 0 to disable freeze token earning. Defaults to 7 days.
+        public var tokenMilestone: Int
+
         /// Creates a new configuration.
         ///
-        /// - Parameter calendar: The calendar to use. Defaults to the current calendar.
-        public init(calendar: Calendar = .current) {
+        /// - Parameters:
+        ///   - calendar: The calendar to use. Defaults to the current calendar.
+        ///   - tokenMilestone: The streak length for earning freeze tokens. Defaults to 7 days.
+        public init(calendar: Calendar = .current, tokenMilestone: Int = 7) {
             self.calendar = calendar
+            self.tokenMilestone = tokenMilestone
         }
     }
 

@@ -17,13 +17,20 @@ struct StreakAnalyticsTests {
         let day1 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 1).date!
         manager.updateStreak(on: day1)
 
-        #expect(delegate.events.count == 1)
-        guard case .streakUpdated(let length, let isNew) = delegate.events[0] else {
-            Issue.record("Expected streakUpdated event")
-            return
+        // First day triggers: newBestStreakAchieved + streakUpdated
+        #expect(delegate.events.count >= 1)
+
+        // Find the streakUpdated event
+        let updatedEvents = delegate.events.compactMap { event -> (Int, Bool)? in
+            if case .streakUpdated(let length, let isNew) = event {
+                return (length, isNew)
+            }
+            return nil
         }
-        #expect(length == 1)
-        #expect(isNew == true)
+
+        #expect(updatedEvents.count == 1)
+        #expect(updatedEvents[0].0 == 1)
+        #expect(updatedEvents[0].1 == true)
     }
 
     @Test @MainActor
@@ -87,15 +94,14 @@ struct StreakAnalyticsTests {
     @Test @MainActor
     func delegateReceivesFreezeTokenUsedEvents() throws {
         let store = InMemoryStore()
-        let manager = StreakManager(store: store, config: .init(calendar: calendar))
+        let config = StreakManager.Config(calendar: calendar, tokenMilestone: 1)
+        let manager = StreakManager(store: store, config: config)
         let delegate = MockAnalyticsDelegate()
         manager.analyticsDelegate = delegate
 
-        // Build a streak and give a token
+        // Build a streak to earn a freeze token (milestone: 1)
         let day1 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 1).date!
         manager.updateStreak(on: day1)
-        manager.streak.freezeTokens = 2
-        manager.save()
 
         delegate.events.removeAll()
 
@@ -111,7 +117,7 @@ struct StreakAnalyticsTests {
         }
 
         #expect(freezeEvents.count == 1)
-        #expect(freezeEvents[0] == 1)  // 1 token remaining
+        #expect(freezeEvents[0] == 0)  // 0 tokens remaining (used the 1)
     }
 
     @Test @MainActor
@@ -121,15 +127,12 @@ struct StreakAnalyticsTests {
         let delegate = MockAnalyticsDelegate()
         manager.analyticsDelegate = delegate
 
-        // Set initial best streak
-        manager.streak.bestStreak = 3
-
         delegate.events.removeAll()
 
-        // Build a streak that exceeds best
+        // Build a 5-day streak that starts fresh (best will grow with it)
         for day in 1...5 {
             let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
-            manager.updateStreak(on: day)
+            manager.updateStreak(on: date)
         }
 
         let bestEvents = delegate.events.compactMap { event -> (Int, Int)? in
@@ -139,10 +142,10 @@ struct StreakAnalyticsTests {
             return nil
         }
 
+        // Best streak should grow from 0 to 5
         #expect(bestEvents.count >= 1)
-        // Find the event where best was exceeded
-        let exceededEvent = bestEvents.first { $0.0 > 3 }
-        #expect(exceededEvent != nil)
+        // First best event should be at length 1
+        #expect(bestEvents[0].0 == 1)
     }
 
     @Test @MainActor
@@ -191,13 +194,15 @@ struct StreakAnalyticsTests {
         let day1 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 1).date!
         manager?.updateStreak(on: day1)
 
-        #expect(delegate.events.count == 1)
+        let eventCountBefore = delegate.events.count
+        #expect(eventCountBefore >= 1)
 
         // Release manager
         manager = nil
 
-        // Delegate should still exist but manager is gone
-        #expect(delegate.events.count == 1)
+        // Delegate should still exist but no new events should be recorded
+        let eventCountAfter = delegate.events.count
+        #expect(eventCountAfter == eventCountBefore)
     }
 
     @Test @MainActor

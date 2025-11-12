@@ -157,6 +157,7 @@ public struct Streak: Codable, Sendable, Equatable {
 public struct Config: Sendable, Equatable {
     public var calendar: Calendar
     public var tokenMilestone: Int  // Earn tokens every N days (default: 7)
+    public var pinnedTimeZone: TimeZone?  // Optional timezone pinning
 }
 ```
 
@@ -251,6 +252,33 @@ if manager.canUseFreeze() {
     }
 }
 ```
+
+### TimeZone Pinning
+
+**Use Cases:**
+- Travelers who want streaks to follow their home timezone
+- Global apps targeting users in specific regions
+- Apps needing consistent day boundaries regardless of user location
+
+**Configuration:**
+```swift
+// Pin to a specific timezone
+let tokyo = TimeZone(identifier: "Asia/Tokyo")!
+.setupMiraiStreak(
+    config: .init(
+        calendar: .current,
+        pinnedTimeZone: tokyo
+    )
+)
+
+// Or use default (no pinning)
+.setupMiraiStreak()  // Uses device timezone
+```
+
+**Behavior:**
+- When set, all date comparisons use the pinned timezone
+- Streak day boundaries align with the pinned timezone
+- User can travel across timezones without affecting streak logic
 
 ## Examples
 

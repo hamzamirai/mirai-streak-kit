@@ -875,6 +875,195 @@ struct StreakManagerTests {
         }
     }
 
+    // MARK: - TimeZone Pinning Tests
+
+    @Suite
+    struct TimeZonePinningTests {
+        let calendar = Calendar(identifier: .gregorian)
+
+        @Test @MainActor
+        func pinnedTimeZoneAppliedToCalendar() throws {
+            let tokyo = TimeZone(identifier: "Asia/Tokyo")!
+            let config = StreakManager.Config(
+                calendar: calendar,
+                pinnedTimeZone: tokyo
+            )
+
+            #expect(config.calendar.timeZone == tokyo)
+            #expect(config.pinnedTimeZone == tokyo)
+        }
+
+        @Test @MainActor
+        func streakCalculationsUsePinnedTimeZone() throws {
+            let store = InMemoryStore()
+            let nyTimeZone = TimeZone(identifier: "America/New_York")!
+            var nyCalendar = Calendar(identifier: .gregorian)
+            nyCalendar.timeZone = nyTimeZone
+
+            let config = StreakManager.Config(
+                calendar: calendar,
+                pinnedTimeZone: nyTimeZone
+            )
+            let manager = StreakManager(store: store, config: config)
+
+            // Create dates that are consecutive in NY timezone
+            var day1Components = DateComponents()
+            day1Components.year = 2025
+            day1Components.month = 1
+            day1Components.day = 15
+            day1Components.hour = 23
+            day1Components.timeZone = nyTimeZone
+            let day1 = nyCalendar.date(from: day1Components)!
+
+            var day2Components = DateComponents()
+            day2Components.year = 2025
+            day2Components.month = 1
+            day2Components.day = 16
+            day2Components.hour = 1
+            day2Components.timeZone = nyTimeZone
+            let day2 = nyCalendar.date(from: day2Components)!
+
+            manager.updateStreak(on: day1)
+            manager.updateStreak(on: day2)
+
+            #expect(manager.streak.length == 2)
+        }
+
+        @Test @MainActor
+        func travelerScenarioAcrossTimeZones() throws {
+            let store = InMemoryStore()
+            let homeTimeZone = TimeZone(identifier: "America/Los_Angeles")!
+            let config = StreakManager.Config(
+                calendar: calendar,
+                pinnedTimeZone: homeTimeZone
+            )
+            let manager = StreakManager(store: store, config: config)
+
+            var homeCalendar = Calendar(identifier: .gregorian)
+            homeCalendar.timeZone = homeTimeZone
+
+            // Day 1: Check in from home timezone
+            var day1Components = DateComponents()
+            day1Components.year = 2025
+            day1Components.month = 6
+            day1Components.day = 1
+            day1Components.hour = 22
+            day1Components.timeZone = homeTimeZone
+            let day1 = homeCalendar.date(from: day1Components)!
+
+            manager.updateStreak(on: day1)
+            #expect(manager.streak.length == 1)
+
+            // Day 2: Travel to Tokyo, but check in according to home timezone
+            let tokyoTimeZone = TimeZone(identifier: "Asia/Tokyo")!
+            var tokyoCalendar = Calendar(identifier: .gregorian)
+            tokyoCalendar.timeZone = tokyoTimeZone
+
+            var day2Components = DateComponents()
+            day2Components.year = 2025
+            day2Components.month = 6
+            day2Components.day = 3  // Next day in Tokyo (but same/next day in LA)
+            day2Components.hour = 15
+            day2Components.timeZone = tokyoTimeZone
+            let day2InTokyo = tokyoCalendar.date(from: day2Components)!
+
+            // Convert to home timezone for verification
+            var day2InHomeComponents = homeCalendar.dateComponents(
+                [.year, .month, .day, .hour],
+                from: day2InTokyo
+            )
+
+            manager.updateStreak(on: day2InTokyo)
+            // Streak should continue because pinned timezone is used
+            #expect(manager.streak.length == 2)
+        }
+
+        @Test @MainActor
+        func noPinnedTimeZoneUsesCalendarDefault() throws {
+            let store = InMemoryStore()
+            var customCalendar = Calendar(identifier: .gregorian)
+            let customTimeZone = TimeZone(identifier: "Europe/London")!
+            customCalendar.timeZone = customTimeZone
+
+            let config = StreakManager.Config(
+                calendar: customCalendar,
+                pinnedTimeZone: nil
+            )
+
+            #expect(config.calendar.timeZone == customTimeZone)
+            #expect(config.pinnedTimeZone == nil)
+        }
+
+        @Test @MainActor
+        func pinnedTimeZonePersistsAcrossSessions() throws {
+            let store = InMemoryStore()
+            let pacific = TimeZone(identifier: "America/Los_Angeles")!
+            let config = StreakManager.Config(
+                calendar: calendar,
+                pinnedTimeZone: pacific
+            )
+
+            // Session 1
+            let manager1 = StreakManager(store: store, config: config)
+            var pacificCalendar = Calendar(identifier: .gregorian)
+            pacificCalendar.timeZone = pacific
+
+            var day1Components = DateComponents()
+            day1Components.year = 2025
+            day1Components.month = 3
+            day1Components.day = 10
+            day1Components.hour = 10
+            day1Components.timeZone = pacific
+            let day1 = pacificCalendar.date(from: day1Components)!
+
+            manager1.updateStreak(on: day1)
+            #expect(manager1.streak.length == 1)
+
+            // Session 2 with same config
+            let manager2 = StreakManager(store: store, config: config)
+            #expect(manager2.config.pinnedTimeZone == pacific)
+            #expect(manager2.streak.length == 1)
+        }
+
+        @Test @MainActor
+        func differentTimeZonesProduceDifferentResults() throws {
+            let store1 = InMemoryStore()
+            let store2 = InMemoryStore()
+
+            let utc = TimeZone(identifier: "UTC")!
+            let tokyo = TimeZone(identifier: "Asia/Tokyo")!
+
+            let configUTC = StreakManager.Config(calendar: calendar, pinnedTimeZone: utc)
+            let configTokyo = StreakManager.Config(calendar: calendar, pinnedTimeZone: tokyo)
+
+            let managerUTC = StreakManager(store: store1, config: configUTC)
+            let managerTokyo = StreakManager(store: store2, config: configTokyo)
+
+            // Same absolute time, different interpretations
+            let absoluteTime = Date(timeIntervalSince1970: 1704153600) // 2024-01-02 00:00:00 UTC
+
+            managerUTC.updateStreak(on: absoluteTime)
+            managerTokyo.updateStreak(on: absoluteTime)
+
+            // Both should have streak of 1 after first check-in
+            #expect(managerUTC.streak.length == 1)
+            #expect(managerTokyo.streak.length == 1)
+        }
+
+        @Test @MainActor
+        func configEquatableWithTimeZones() throws {
+            let pacific = TimeZone(identifier: "America/Los_Angeles")!
+            let eastern = TimeZone(identifier: "America/New_York")!
+
+            let config1 = StreakManager.Config(calendar: calendar, pinnedTimeZone: pacific)
+            let config2 = StreakManager.Config(calendar: calendar, pinnedTimeZone: pacific)
+            let config3 = StreakManager.Config(calendar: calendar, pinnedTimeZone: eastern)
+
+            #expect(config1 == config2)
+            #expect(config1 != config3)
+        }
+    }
+
     // MARK: - Sendable Conformance
 
     @Test @MainActor

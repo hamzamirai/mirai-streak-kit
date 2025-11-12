@@ -26,6 +26,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevents multiple token usage for same missed day
   - Includes 11 comprehensive tests for freeze token functionality
 
+- **TimeZone Pinning**: Lock streak calculations to specific timezone for travelers
+  - Added `pinnedTimeZone` optional property to `Config`
+  - Automatically applies pinned timezone to calendar
+  - All date comparisons use pinned timezone when set
+  - Useful for travelers and global apps with regional focus
+  - Config initialization automatically configures calendar timezone
+  - Includes 7 comprehensive tests covering timezone scenarios
+
 ### Fixes
 - **Swift Version Requirement**: Further downgraded to Swift 6.0.0 for maximum GitHub Actions runner compatibility
   - Xcode 16.0 on macOS-latest includes Swift 6.0.0

@@ -83,6 +83,7 @@ public final class StreakManager {
     /// - Does nothing if already completed today
     /// - Increments the streak if continuing from yesterday
     /// - Resets to 1 if the streak was broken
+    /// - Automatically updates best streak if current exceeds it
     ///
     /// Changes are automatically persisted to the store.
     ///
@@ -97,6 +98,11 @@ public final class StreakManager {
         case .streakBroken:
             streak.lastDate = date
             streak.length = 1
+        }
+
+        // Update best streak if current streak exceeds it
+        if streak.length > streak.bestStreak {
+            streak.bestStreak = streak.length
         }
 
         save()
@@ -130,6 +136,13 @@ public final class StreakManager {
         }
 
         return config.calendar.isDate(date, inSameDayAs: lastDate)
+    }
+
+    /// Gets the best (longest) streak ever achieved.
+    ///
+    /// - Returns: The best streak length.
+    public func getBestStreak() -> Int {
+        return streak.bestStreak
     }
 
     private func save() {

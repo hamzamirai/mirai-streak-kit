@@ -6,6 +6,7 @@ A modern, Swift 6-native streak tracking framework for iOS, macOS, and visionOS 
 
 - ✨ **Swift 6 & Observation**: Leverages `@Observable` for reactive UI updates
 - 🎯 **Next-Day Window Logic**: Streak continues when checked in from 00:00–23:59 the next calendar day
+- 🏆 **Best Streak Tracking**: Automatically tracks and displays the longest streak ever achieved
 - 💾 **Flexible Persistence**: UserDefaults, file-based, or shared App Group storage
 - 🧪 **Fully Tested**: Comprehensive test suite with the Swift Testing framework
 - 🔒 **Concurrency-Safe**: `@MainActor` isolation with strict Swift 6 concurrency checking
@@ -63,21 +64,25 @@ import MiraiStreakKit
 
 struct ContentView: View {
     @Environment(StreakManager.self) private var streakManager
-    
+
     var body: some View {
         VStack(spacing: 20) {
-            // Pre-built streak view
+            // Pre-built streak view (shows both current and best)
             StreakView()
-            
+
             // Custom UI
             Text("Current Streak: \(streakManager.getStreakLength())")
                 .font(.title)
-            
+
+            Text("Best Streak: \(streakManager.getBestStreak())")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
             Button("Check In Today") {
                 streakManager.updateStreak()
             }
             .disabled(streakManager.hasCompletedStreak())
-            
+
             if streakManager.hasCompletedStreak() {
                 Text("✅ Completed for today!")
                     .foregroundStyle(.green)
@@ -104,6 +109,9 @@ func updateStreak(on date: Date = .now)
 @discardableResult
 func getStreakLength(on date: Date = .now) -> Int
 
+// Get the best (longest) streak ever achieved
+func getBestStreak() -> Int
+
 // Check if streak completed for a given date
 func hasCompletedStreak(on date: Date = .now) -> Bool
 ```
@@ -125,6 +133,7 @@ The core data structure representing a streak.
 ```swift
 public struct Streak: Codable, Sendable, Equatable {
     public var length: Int
+    public var bestStreak: Int
     public var lastDate: Date?
 }
 ```

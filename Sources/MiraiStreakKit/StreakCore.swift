@@ -2,19 +2,22 @@ import Foundation
 
 /// A data structure representing a daily streak.
 ///
-/// A streak tracks consecutive days of completion, storing the current length
-/// and the last date a check-in occurred.
+/// A streak tracks consecutive days of completion, storing the current length,
+/// the best (longest) streak ever achieved, and the last date a check-in occurred.
 ///
 /// ## Example
 ///
 /// ```swift
-/// var streak = Streak(length: 5, lastDate: Date())
+/// var streak = Streak(length: 5, bestStreak: 10, lastDate: Date())
 /// let outcome = streak.determineOutcome(on: Date())
 /// ```
 public struct Streak: Codable, Sendable, Equatable {
     /// The current length of the streak (number of consecutive days).
     public var length: Int
-    
+
+    /// The best (longest) streak ever achieved.
+    public var bestStreak: Int
+
     /// The last date when a check-in occurred.
     public var lastDate: Date?
 
@@ -22,9 +25,11 @@ public struct Streak: Codable, Sendable, Equatable {
     ///
     /// - Parameters:
     ///   - length: The initial streak length. Defaults to 0.
+    ///   - bestStreak: The best streak ever achieved. Defaults to 0.
     ///   - lastDate: The last check-in date. Defaults to nil.
-    public init(length: Int = 0, lastDate: Date? = nil) {
+    public init(length: Int = 0, bestStreak: Int = 0, lastDate: Date? = nil) {
         self.length = length
+        self.bestStreak = bestStreak
         self.lastDate = lastDate
     }
 

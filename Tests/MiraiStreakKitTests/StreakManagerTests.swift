@@ -512,6 +512,152 @@ struct StreakManagerTests {
         }
     }
 
+    // MARK: - Best Streak Tests
+
+    @Suite
+    struct BestStreakTests {
+        let calendar = Calendar(identifier: .gregorian)
+
+        @Test @MainActor
+        func bestStreakUpdatesWhenCurrentExceedsIt() throws {
+            let store = InMemoryStore()
+            let manager = StreakManager(store: store, config: .init(calendar: calendar))
+
+            let day1 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 1).date!
+            let day2 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 2).date!
+            let day3 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 3).date!
+
+            manager.updateStreak(on: day1)
+            #expect(manager.getBestStreak() == 1)
+            #expect(manager.streak.bestStreak == 1)
+
+            manager.updateStreak(on: day2)
+            #expect(manager.getBestStreak() == 2)
+            #expect(manager.streak.bestStreak == 2)
+
+            manager.updateStreak(on: day3)
+            #expect(manager.getBestStreak() == 3)
+            #expect(manager.streak.bestStreak == 3)
+        }
+
+        @Test @MainActor
+        func bestStreakDoesNotDecreaseWhenStreakBreaks() throws {
+            let store = InMemoryStore()
+            let manager = StreakManager(store: store, config: .init(calendar: calendar))
+
+            // Build a 5-day streak
+            for day in 1...5 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager.updateStreak(on: date)
+            }
+
+            #expect(manager.streak.length == 5)
+            #expect(manager.getBestStreak() == 5)
+
+            // Break the streak (skip day 6, check in on day 8)
+            let day8 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 8).date!
+            manager.updateStreak(on: day8)
+
+            #expect(manager.streak.length == 1)
+            #expect(manager.getBestStreak() == 5)  // Best streak remains 5
+        }
+
+        @Test @MainActor
+        func bestStreakUpdatesThroughMultipleBreaksAndRecoveries() throws {
+            let store = InMemoryStore()
+            let manager = StreakManager(store: store, config: .init(calendar: calendar))
+
+            // First streak: 3 days
+            for day in 1...3 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager.updateStreak(on: date)
+            }
+            #expect(manager.getBestStreak() == 3)
+
+            // Break and start new streak: 7 days (exceeds best)
+            for day in 10...16 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager.updateStreak(on: date)
+            }
+            #expect(manager.streak.length == 7)
+            #expect(manager.getBestStreak() == 7)
+
+            // Break again and start shorter streak: 2 days
+            let day20 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 20).date!
+            let day21 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 21).date!
+            manager.updateStreak(on: day20)
+            manager.updateStreak(on: day21)
+
+            #expect(manager.streak.length == 2)
+            #expect(manager.getBestStreak() == 7)  // Best streak remains 7
+        }
+
+        @Test @MainActor
+        func bestStreakPersistsAcrossSessions() throws {
+            let store = InMemoryStore()
+
+            // Session 1: Build a 5-day streak
+            let manager1 = StreakManager(store: store, config: .init(calendar: calendar))
+            for day in 1...5 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager1.updateStreak(on: date)
+            }
+            #expect(manager1.getBestStreak() == 5)
+
+            // Session 2: Load from store, best streak should persist
+            let manager2 = StreakManager(store: store, config: .init(calendar: calendar))
+            #expect(manager2.getBestStreak() == 5)
+            #expect(manager2.streak.length == 5)
+
+            // Continue streak in session 2
+            let day6 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 6).date!
+            manager2.updateStreak(on: day6)
+            #expect(manager2.getBestStreak() == 6)
+
+            // Session 3: Verify persistence again
+            let manager3 = StreakManager(store: store, config: .init(calendar: calendar))
+            #expect(manager3.getBestStreak() == 6)
+        }
+
+        @Test @MainActor
+        func bestStreakStartsAtZero() throws {
+            let store = InMemoryStore()
+            let manager = StreakManager(store: store, config: .init(calendar: calendar))
+
+            #expect(manager.getBestStreak() == 0)
+            #expect(manager.streak.bestStreak == 0)
+        }
+
+        @Test @MainActor
+        func bestStreakEqualsCurrentWhenActive() throws {
+            let store = InMemoryStore()
+            let manager = StreakManager(store: store, config: .init(calendar: calendar))
+
+            let day1 = DateComponents(calendar: calendar, year: 2025, month: 10, day: 1).date!
+            manager.updateStreak(on: day1)
+
+            // When there's no break, best equals current
+            #expect(manager.streak.length == 1)
+            #expect(manager.getBestStreak() == 1)
+            #expect(manager.streak.length == manager.getBestStreak())
+        }
+
+        @Test @MainActor
+        func bestStreakWithLongRunningStreak() throws {
+            let store = InMemoryStore()
+            let manager = StreakManager(store: store, config: .init(calendar: calendar))
+
+            // Build a 30-day streak
+            for day in 1...30 {
+                let date = DateComponents(calendar: calendar, year: 2025, month: 10, day: day).date!
+                manager.updateStreak(on: date)
+            }
+
+            #expect(manager.streak.length == 30)
+            #expect(manager.getBestStreak() == 30)
+        }
+    }
+
     // MARK: - Sendable Conformance
 
     @Test @MainActor

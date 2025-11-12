@@ -189,7 +189,7 @@ struct StreakCoreTests {
     @Test("Encodes and decodes with valid data")
     func codableRoundTrip() throws {
         let last = DateComponents(calendar: gregorian, year: 2025, month: 10, day: 18, hour: 12).date!
-        let original = Streak(length: 5, lastDate: last)
+        let original = Streak(length: 5, bestStreak: 10, lastDate: last)
 
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
@@ -197,12 +197,13 @@ struct StreakCoreTests {
         let decoded = try decoder.decode(Streak.self, from: data)
 
         #expect(decoded.length == original.length)
+        #expect(decoded.bestStreak == original.bestStreak)
         #expect(decoded.lastDate == original.lastDate)
     }
 
     @Test("Encodes and decodes with nil lastDate")
     func codableWithNilLastDate() throws {
-        let original = Streak(length: 3, lastDate: nil)
+        let original = Streak(length: 3, bestStreak: 7, lastDate: nil)
 
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
@@ -210,7 +211,23 @@ struct StreakCoreTests {
         let decoded = try decoder.decode(Streak.self, from: data)
 
         #expect(decoded.length == original.length)
+        #expect(decoded.bestStreak == original.bestStreak)
         #expect(decoded.lastDate == nil)
+    }
+
+    @Test("Encodes and decodes with bestStreak equal to current")
+    func codableWithBestStreakEqualsToCurrent() throws {
+        let last = DateComponents(calendar: gregorian, year: 2025, month: 10, day: 18, hour: 12).date!
+        let original = Streak(length: 15, bestStreak: 15, lastDate: last)
+
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        let data = try encoder.encode(original)
+        let decoded = try decoder.decode(Streak.self, from: data)
+
+        #expect(decoded.length == 15)
+        #expect(decoded.bestStreak == 15)
+        #expect(decoded.length == decoded.bestStreak)
     }
 
     @Test("Decoding succeeds with missing optional fields")
@@ -225,7 +242,26 @@ struct StreakCoreTests {
         let decoded = try decoder.decode(Streak.self, from: invalidJSON)
 
         #expect(decoded.length == 5)
+        #expect(decoded.bestStreak == 0)  // Should default to 0
         #expect(decoded.lastDate == nil)
+    }
+
+    @Test("Decoding old data without bestStreak field")
+    func decodingBackwardCompatibility() throws {
+        // Simulate old data format without bestStreak
+        let oldJSON = """
+        {
+            "length": 7,
+            "lastDate": 688393200.0
+        }
+        """.data(using: .utf8)!
+
+        let decoder = JSONDecoder()
+        let decoded = try decoder.decode(Streak.self, from: oldJSON)
+
+        #expect(decoded.length == 7)
+        #expect(decoded.bestStreak == 0)  // Should default to 0 for backward compatibility
+        #expect(decoded.lastDate != nil)
     }
 
     @Test("Decoding fails with wrong data types")

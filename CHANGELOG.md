@@ -7,17 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Best Streak Tracking**: Automatically tracks and persists the longest streak ever achieved
+  - Added `bestStreak` property to `Streak` struct
+  - Added `getBestStreak()` method to `StreakManager`
+  - Updated `StreakView` to display both current and best streaks
+  - Backward compatible with existing data (defaults to 0)
+  - Includes 9 comprehensive tests for best streak functionality
+
 ### Fixes
 - **Swift Version Requirement**: Further downgraded to Swift 6.0.0 for maximum GitHub Actions runner compatibility
   - Xcode 16.0 on macOS-latest includes Swift 6.0.0
-  - All 142 tests pass with Swift 6.0.0
+  - All tests pass with Swift 6.0.0
 
 ### Planned Features
 - TimeZone pinning for cross-timezone applications
-- Best streak tracking alongside current streak
 - Freeze/Make-up day tokens for streak protection
 - Analytics integration hooks
 - CloudKit persistence option
+- Firestore persistence option
+- Reminders system for streak notifications
 - Performance optimizations for large datasets
 
 ---

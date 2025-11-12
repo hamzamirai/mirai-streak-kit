@@ -80,9 +80,15 @@ public final class StreakManager {
     ///
     /// SwiftUI views that read this property will automatically update when it changes.
     public private(set) var streak: Streak
-    
+
     /// The manager's configuration.
     public var config: Config
+
+    /// Optional analytics delegate for tracking streak events.
+    ///
+    /// Set this to receive notifications about important streak events
+    /// such as updates, milestones, breaks, and freeze token usage.
+    public weak var analyticsDelegate: (any StreakAnalyticsDelegate)?
 
     private let store: any StreakStore
     private let encoder: JSONEncoder
@@ -112,12 +118,15 @@ public final class StreakManager {
     /// - Resets to 1 if the streak was broken
     /// - Automatically updates best streak if current exceeds it
     /// - Awards freeze tokens at milestone intervals
+    /// - Fires analytics events for tracking
     ///
     /// Changes are automatically persisted to the store.
     ///
     /// - Parameter date: The date to update for. Defaults to the current date.
     public func updateStreak(on date: Date = .now) {
         let previousLength = streak.length
+        let previousBest = streak.bestStreak
+        var streakWasBroken = false
 
         switch streak.determineOutcome(on: date, calendar: config.calendar) {
         case .alreadyCompletedToday:
@@ -126,21 +135,58 @@ public final class StreakManager {
             streak.lastDate = date
             streak.length += 1
         case .streakBroken:
+            streakWasBroken = true
             streak.lastDate = date
             streak.length = 1
+        }
+
+        let isNewStreak = streak.length == 1
+
+        // Fire streak broken event
+        if streakWasBroken && previousLength > 0 {
+            analyticsDelegate?.streakEventOccurred(
+                .streakBroken(previousLength: previousLength, bestStreak: previousBest),
+                manager: self
+            )
         }
 
         // Update best streak if current streak exceeds it
         if streak.length > streak.bestStreak {
             streak.bestStreak = streak.length
+
+            // Fire new best streak event
+            if streak.length > previousBest {
+                analyticsDelegate?.streakEventOccurred(
+                    .newBestStreakAchieved(newBest: streak.length, previousBest: previousBest),
+                    manager: self
+                )
+            }
         }
 
         // Award freeze token at milestones
+        var earnedToken = false
         if config.tokenMilestone > 0 &&
            streak.length % config.tokenMilestone == 0 &&
            streak.length > previousLength {
             streak.freezeTokens += 1
+            earnedToken = true
         }
+
+        // Fire milestone event if at milestone
+        if config.tokenMilestone > 0 &&
+           streak.length % config.tokenMilestone == 0 &&
+           streak.length > 0 {
+            analyticsDelegate?.streakEventOccurred(
+                .milestoneReached(length: streak.length, earnedToken: earnedToken),
+                manager: self
+            )
+        }
+
+        // Fire streak updated event
+        analyticsDelegate?.streakEventOccurred(
+            .streakUpdated(length: streak.length, isNewStreak: isNewStreak),
+            manager: self
+        )
 
         save()
     }
@@ -218,6 +264,12 @@ public final class StreakManager {
         streak.lastFreezeDate = date
         streak.lastDate = date
         // Don't increment length - just maintain it
+
+        // Fire freeze token used event
+        analyticsDelegate?.streakEventOccurred(
+            .freezeTokenUsed(tokensRemaining: streak.freezeTokens),
+            manager: self
+        )
 
         save()
         return true

@@ -34,6 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Config initialization automatically configures calendar timezone
   - Includes 7 comprehensive tests covering timezone scenarios
 
+- **Analytics Integration Hooks**: Track streak events with delegate pattern
+  - Added `StreakEvent` enum with 5 event types
+  - Added `StreakAnalyticsDelegate` protocol for event notifications
+  - Added `analyticsDelegate` weak property to `StreakManager`
+  - Events: streakUpdated, milestoneReached, streakBroken, freezeTokenUsed, newBestStreakAchieved
+  - Weak delegate prevents retain cycles
+  - Events fired at appropriate points in streak lifecycle
+  - Includes 10 comprehensive tests for analytics integration
+
 ### Fixes
 - **Swift Version Requirement**: Further downgraded to Swift 6.0.0 for maximum GitHub Actions runner compatibility
   - Xcode 16.0 on macOS-latest includes Swift 6.0.0

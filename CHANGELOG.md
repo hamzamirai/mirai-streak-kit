@@ -48,10 +48,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Xcode 16.0 on macOS-latest includes Swift 6.0.0
   - All 142 tests pass with Swift 6.0.0
 
+### Documentation
+- **Cloud Storage Examples**: Added comprehensive CloudKit and Firestore implementation examples
+  - FirestoreStreakStore with background sync
+  - RealtimeFirestoreStore with real-time listeners
+  - CloudKitStreakStore with background sync (already existed, enhanced)
+  - Complete working examples in EXAMPLES.md
+  - Shows how to integrate Firebase or CloudKit without adding dependencies to the core library
+
 ### Planned Features
-- CloudKit persistence option
 - Performance optimizations for large datasets
-- Widget support for iOS 17+
+- Widget support enhancements for iOS 17+
 - App Clips integration
 
 ---

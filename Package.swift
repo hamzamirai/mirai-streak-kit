@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "MiraiStreakKit",
+    name: "mirai-streak-kit",
     platforms: [
         .iOS(.v17),
         .macOS(.v14),

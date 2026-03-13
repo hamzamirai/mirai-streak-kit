@@ -114,10 +114,16 @@ public final class StreakManager {
         case .streakContinues:
             streak.lastDate = date
             streak.length += 1
+            streak.completedDates.append(
+                config.calendar.startOfDay(for: date)
+            )
         case .streakBroken:
             streakWasBroken = true
             streak.lastDate = date
             streak.length = 1
+            streak.completedDates.append(
+                config.calendar.startOfDay(for: date)
+            )
         }
 
         let isNewStreak = streak.length == 1

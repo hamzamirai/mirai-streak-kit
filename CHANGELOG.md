@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Completed Dates Tracking**: Historical record of completion dates for heatmap rendering
+  - Added `completedDates: [Date]` property to `Streak` struct
+  - Added `hasCompleted(on:calendar:)` method to query completion history
+  - Automatically populated in `StreakManager.updateStreak()` on streak continuation or break
+  - Backwards compatible with existing data (defaults to empty array)
+  - Enables heatmap widgets and historical visualizations
+
 - **Best Streak Tracking**: Automatically tracks and persists the longest streak ever achieved
   - Added `bestStreak` property to `Streak` struct
   - Added `getBestStreak()` method to `StreakManager`

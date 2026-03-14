@@ -217,6 +217,226 @@ let encryptionKey = SymmetricKey(size: .bits256)
 )
 ```
 
+### Firestore Sync Example
+
+```swift
+import Foundation
+import FirebaseFirestore
+import MiraiStreakKit
+
+@MainActor
+final class FirestoreStreakStore: StreakStore {
+    private let db: Firestore
+    private let userId: String
+    private let collectionPath: String
+
+    init(userId: String, collectionPath: String = "streaks") {
+        self.db = Firestore.firestore()
+        self.userId = userId
+        self.collectionPath = collectionPath
+    }
+
+    func read() -> Data? {
+        // Synchronous read from local cache
+        return UserDefaults.standard.data(forKey: "cachedStreak_\(userId)")
+    }
+
+    func write(_ data: Data) throws {
+        // Save locally for immediate use
+        UserDefaults.standard.set(data, forKey: "cachedStreak_\(userId)")
+
+        // Background sync to Firestore
+        Task {
+            await syncToFirestore(data)
+        }
+    }
+
+    private func syncToFirestore(_ data: Data) async {
+        do {
+            let docRef = db.collection(collectionPath).document(userId)
+
+            // Decode streak data
+            let decoder = JSONDecoder()
+            let streak = try decoder.decode(Streak.self, from: data)
+
+            // Convert to Firestore-compatible format
+            let streakData: [String: Any] = [
+                "length": streak.length,
+                "bestStreak": streak.bestStreak,
+                "freezeTokens": streak.freezeTokens,
+                "lastDate": streak.lastDate?.timeIntervalSince1970 ?? NSNull(),
+                "lastFreezeDate": streak.lastFreezeDate?.timeIntervalSince1970 ?? NSNull(),
+                "updatedAt": FieldValue.serverTimestamp()
+            ]
+
+            try await docRef.setData(streakData, merge: true)
+        } catch {
+            print("Firestore sync failed: \(error)")
+        }
+    }
+
+    // Optional: Fetch from Firestore on app launch
+    func fetchFromFirestore() async throws -> Data? {
+        let docRef = db.collection(collectionPath).document(userId)
+        let document = try await docRef.getDocument()
+
+        guard let data = document.data() else { return nil }
+
+        // Convert from Firestore format back to Streak
+        let lastDate: Date? = if let timestamp = data["lastDate"] as? Double {
+            Date(timeIntervalSince1970: timestamp)
+        } else {
+            nil
+        }
+
+        let lastFreezeDate: Date? = if let timestamp = data["lastFreezeDate"] as? Double {
+            Date(timeIntervalSince1970: timestamp)
+        } else {
+            nil
+        }
+
+        let streak = Streak(
+            length: data["length"] as? Int ?? 0,
+            bestStreak: data["bestStreak"] as? Int ?? 0,
+            freezeTokens: data["freezeTokens"] as? Int ?? 0,
+            lastDate: lastDate,
+            lastFreezeDate: lastFreezeDate
+        )
+
+        let encoder = JSONEncoder()
+        return try encoder.encode(streak)
+    }
+}
+
+// Usage
+@main
+struct FirebaseSyncApp: App {
+    init() {
+        // Configure Firebase
+        FirebaseApp.configure()
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .setupMiraiStreak(
+                    store: FirestoreStreakStore(userId: Auth.auth().currentUser?.uid ?? "anonymous")
+                )
+        }
+    }
+}
+
+// Optional: Fetch from Firestore on app launch
+Task {
+    let store = FirestoreStreakStore(userId: "user123")
+    if let cloudData = try? await store.fetchFromFirestore() {
+        // Cloud data available, will be used by StreakManager
+    }
+}
+```
+
+### Real-time Firestore Sync with Listeners
+
+```swift
+import Foundation
+import FirebaseFirestore
+import MiraiStreakKit
+
+@MainActor
+final class RealtimeFirestoreStore: StreakStore {
+    private let db: Firestore
+    private let userId: String
+    private var listener: ListenerRegistration?
+
+    // Callback for when cloud data changes
+    var onCloudUpdate: ((Data) -> Void)?
+
+    init(userId: String) {
+        self.db = Firestore.firestore()
+        self.userId = userId
+        startListening()
+    }
+
+    deinit {
+        listener?.remove()
+    }
+
+    func read() -> Data? {
+        UserDefaults.standard.data(forKey: "cachedStreak_\(userId)")
+    }
+
+    func write(_ data: Data) throws {
+        UserDefaults.standard.set(data, forKey: "cachedStreak_\(userId)")
+
+        Task {
+            await uploadToFirestore(data)
+        }
+    }
+
+    private func startListening() {
+        let docRef = db.collection("streaks").document(userId)
+
+        listener = docRef.addSnapshotListener { [weak self] snapshot, error in
+            guard let self = self,
+                  let data = snapshot?.data(),
+                  error == nil else { return }
+
+            Task { @MainActor in
+                await self.handleCloudUpdate(data)
+            }
+        }
+    }
+
+    private func handleCloudUpdate(_ data: [String: Any]) async {
+        // Convert Firestore data to Streak
+        let lastDate: Date? = if let timestamp = data["lastDate"] as? Double {
+            Date(timeIntervalSince1970: timestamp)
+        } else {
+            nil
+        }
+
+        let lastFreezeDate: Date? = if let timestamp = data["lastFreezeDate"] as? Double {
+            Date(timeIntervalSince1970: timestamp)
+        } else {
+            nil
+        }
+
+        let streak = Streak(
+            length: data["length"] as? Int ?? 0,
+            bestStreak: data["bestStreak"] as? Int ?? 0,
+            freezeTokens: data["freezeTokens"] as? Int ?? 0,
+            lastDate: lastDate,
+            lastFreezeDate: lastFreezeDate
+        )
+
+        if let encoded = try? JSONEncoder().encode(streak) {
+            UserDefaults.standard.set(encoded, forKey: "cachedStreak_\(userId)")
+            onCloudUpdate?(encoded)
+        }
+    }
+
+    private func uploadToFirestore(_ data: Data) async {
+        do {
+            let decoder = JSONDecoder()
+            let streak = try decoder.decode(Streak.self, from: data)
+
+            let streakData: [String: Any] = [
+                "length": streak.length,
+                "bestStreak": streak.bestStreak,
+                "freezeTokens": streak.freezeTokens,
+                "lastDate": streak.lastDate?.timeIntervalSince1970 ?? NSNull(),
+                "lastFreezeDate": streak.lastFreezeDate?.timeIntervalSince1970 ?? NSNull(),
+                "updatedAt": FieldValue.serverTimestamp()
+            ]
+
+            try await db.collection("streaks").document(userId).setData(streakData, merge: true)
+        } catch {
+            print("Upload failed: \(error)")
+        }
+    }
+}
+```
+
 ## WidgetKit Integration
 
 ### Shared Streak Widget
